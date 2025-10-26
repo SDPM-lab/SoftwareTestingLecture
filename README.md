@@ -1,17 +1,17 @@
 # app.py
 ```python
 from flask import Flask, request, jsonify
-import db
+from integration_test.db import insert_user
 
-app = Flask(__name__)
+flask_app = Flask(__name__)
 
-@app.route("/register", methods=["POST"])
+@flask_app.route("/register", methods=["POST"])
 def register():
     data = request.get_json()
     username = data.get("username")
     if not username:
         return jsonify({"error": "Username required"}), 400
-    db.insert_user(username)
+    insert_user(username)
     return jsonify({"message": f"User {username} registered"}), 201
 ```
 
@@ -42,27 +42,25 @@ def get_users():
     users = [row[0] for row in db_connection_cursor.fetchall()]
     db_connection.close()
     return users
-
 ```
 
 # test_integration.py
 
 ```python
 import pytest
-from integration_test import app
-import db
+
+from integration_test.db import (init_db, get_users)
+from integration_test.app import (flask_app)
 
 
 @pytest.fixture(scope="module")
 def client():
-    db.init_db()
-    with app.flask_app.test_client() as client:
+    init_db()
+    with flask_app.test_client() as client:
         yield client
-
 
 def test_register_user(client):
     response = client.post("/register", json={"username": "Alice"})
     assert response.status_code == 201
-    assert "Alice" in db.get_users()
-
+    assert "Alice" in get_users()
 ```
